@@ -216,9 +216,9 @@ try:
     vix, vix_prev, vix_dt = fetch_fred_latest("VIXCLS")
     y10, y10_prev, y10_dt = fetch_fred_latest("DGS10")
 
-    dxy, dxy_prev, dxy_dt = fetch_stooq_daily_latest("dx-y.nyse")  # US Dollar Index ETF proxy
+    dxy, dxy_prev, dxy_dt = fetch_fred_latest("DTWEXBGS")          # US Dollar Index ETF proxy
     ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")     # Nasdaq-100 ETF proxy
-    btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btcusd")     # Bitcoin USD
+    btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btc-usd")     # Bitcoin USD
 
     c1, c2, c3, c4, c5 = st.columns(5)
 
