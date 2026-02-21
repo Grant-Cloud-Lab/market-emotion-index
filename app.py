@@ -208,11 +208,8 @@ def score_headlines(headline_items, half_life_hours: float):
 
 
 st.title("📈 Market Emotion Index (Live)")
+
 # ----------------------------
-# Drivers Panel
-# ----------------------------
-try:
-    # ----------------------------
 # Drivers Panel
 # ----------------------------
 try:
@@ -242,9 +239,6 @@ try:
         st.metric("BTC", f"${btc:,.0f}", fmt_pct(pct_change(btc, btc_prev)))
 
     st.divider()
-
-except Exception as e:
-    st.warning(f"Driver data loading... ({e})")
 
 except Exception as e:
     st.warning(f"Driver data loading... ({e})")
