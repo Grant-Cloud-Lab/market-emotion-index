@@ -212,13 +212,12 @@ st.title("📈 Market Emotion Index (Live)")
 # Drivers Panel
 # ----------------------------
 try:
-    vix, vix_prev, vix_dt = fetch_fred_latest("VIXCLS")
+     vix, vix_prev, vix_dt = fetch_fred_latest("VIXCLS")
     y10, y10_prev, y10_dt = fetch_fred_latest("DGS10")
 
     dxy, dxy_prev, dxy_dt = fetch_stooq_daily_latest("dx-y.nyse")   # US Dollar Index ETF proxy
-ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")      # Nasdaq-100 ETF proxy
-btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btcusd")      # Bitcoin USD
-
+    ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")      # Nasdaq-100 ETF proxy
+    btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btcusd")      # Bitcoin USD
 
     c1, c2, c3, c4, c5 = st.columns(5)
 
@@ -230,17 +229,19 @@ btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btcusd")      # Bitcoin USD
         st.metric("US 10Y", f"{y10:.2f}%", f"{bps:+.0f} bps")
 
     with c3:
-   st.metric("DXY", f"{dxy:.2f}", fmt_pct(pct_change(dxy, dxy_prev)))
+        st.metric("DXY", f"{dxy:.2f}", fmt_pct(pct_change(dxy, dxy_prev)))
 
     with c4:
-      st.metric("Nasdaq", f"{ndq:,.0f}", fmt_pct(pct_change(ndq, ndq_prev)))
+        st.metric("Nasdaq", f"{ndq:,.0f}", fmt_pct(pct_change(ndq, ndq_prev)))
 
     with c5:
         st.metric("BTC", f"${btc:,.0f}", fmt_pct(pct_change(btc, btc_prev)))
+
     st.divider()
 
 except Exception as e:
-    st.warning("Driver data loading...")
+    st.warning(f"Driver data loading... ({e})")
+
 
 st_autorefresh(interval=REFRESH_SECONDS * 1000, key="refresh")
 
