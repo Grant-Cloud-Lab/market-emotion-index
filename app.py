@@ -28,6 +28,40 @@ PANIC_KEYWORDS = [
 ]
 
 HISTORY_PATH = os.path.join("data", "history.csv")
+# ----------------------------
+# Market Drivers (VIX, 10Y, DXY, Nasdaq, BTC)
+# ----------------------------
+
+@st.cache_data(ttl=300)
+def fetch_fred_latest(series_id: str):
+    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+    df = pd.read_csv(url)
+    df.columns = ["date", "value"]
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    df = df.dropna().sort_values("date")
+    latest = float(df.iloc[-1]["value"])
+    prev = float(df.iloc[-2]["value"]) if len(df) >= 2 else float("nan")
+    date_latest = df.iloc[-1]["date"]
+    return latest, prev, date_latest
+
+
+@st.cache_data(ttl=300)
+def fetch_stooq_daily_latest(symbol: str):
+    url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
+    df = pd.read_csv(url)
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df = df.dropna().sort_values("Date")
+    latest = float(df.iloc[-1]["Close"])
+    prev = float(df.iloc[-2]["Close"]) if len(df) >= 2 else float("nan")
+    date_latest = df.iloc[-1]["Date"]
+    return latest, prev, date_latest
+
+
+def pct_change(latest, prev):
+    if prev == 0 or pd.isna(prev):
+        return None
+    return (latest - prev) / prev * 100.0
 
 
 def now_local() -> datetime:
@@ -167,6 +201,40 @@ def score_headlines(headline_items, half_life_hours: float):
 
 
 st.title("📈 Market Emotion Index (Live)")
+# ----------------------------
+# Drivers Panel
+# ----------------------------
+try:
+    vix, vix_prev, vix_dt = fetch_fred_latest("VIXCLS")
+    y10, y10_prev, y10_dt = fetch_fred_latest("DGS10")
+
+    dxy, dxy_prev, dxy_dt = fetch_stooq_daily_latest("dx.f")
+    ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("^ndq")
+    btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btcusd")
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+
+    with c1:
+        st.metric("VIX", f"{vix:.2f}", f"{(vix - vix_prev):+.2f}")
+
+    with c2:
+        bps = (y10 - y10_prev) * 100
+        st.metric("US 10Y", f"{y10:.2f}%", f"{bps:+.0f} bps")
+
+    with c3:
+        st.metric("DXY", f"{dxy:.2f}", f"{pct_change(dxy, dxy_prev):+.2f}%")
+
+    with c4:
+        st.metric("Nasdaq", f"{ndq:,.0f}", f"{pct_change(ndq, ndq_prev):+.2f}%")
+
+    with c5:
+        st.metric("BTC", f"${btc:,.0f}", f"{pct_change(btc, btc_prev):+.2f}%")
+
+    st.divider()
+
+except Exception as e:
+    st.warning("Driver data loading...")
+
 st_autorefresh(interval=REFRESH_SECONDS * 1000, key="refresh")
 
 with st.sidebar:
