@@ -241,8 +241,8 @@ try:
     st.divider()
 
 except Exception as e:
-    st.warning(f"Driver data loading... ({e})")
-
+    st.warning(f"Driver data loading...")
+    st.exception(e) 
 
 st_autorefresh(interval=REFRESH_SECONDS * 1000, key="refresh")
 
