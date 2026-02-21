@@ -45,17 +45,31 @@ def fetch_fred_latest(series_id: str):
     date_latest = df.iloc[-1]["date"]
     return latest, prev, date_latest
 
-
 @st.cache_data(ttl=300)
 def fetch_stooq_daily_latest(symbol: str):
     url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
     df = pd.read_csv(url)
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df = df.dropna().sort_values("Date")
-    latest = float(df.iloc[-1]["Close"])
-    prev = float(df.iloc[-2]["Close"]) if len(df) >= 2 else float("nan")
-    date_latest = df.iloc[-1]["Date"]
+
+    # Normalize column names to lowercase
+    df.columns = [c.strip().lower() for c in df.columns]
+
+    if "date" not in df.columns or "close" not in df.columns:
+        raise ValueError(f"Unexpected columns for {symbol}: {df.columns.tolist()}")
+
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["close"] = pd.to_numeric(df["close"], errors="coerce")
+
+    df = df.dropna().sort_values("date")
+
+    if len(df) < 2:
+        raise ValueError(f"Not enough data returned for {symbol}")
+
+    latest = float(df.iloc[-1]["close"])
+    prev = float(df.iloc[-2]["close"])
+    date_latest = df.iloc[-1]["date"]
+
     return latest, prev, date_latest
+
 
 def pct_change(latest, prev):
     if prev == 0 or pd.isna(prev):
