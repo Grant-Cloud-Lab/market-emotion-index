@@ -57,11 +57,18 @@ def fetch_stooq_daily_latest(symbol: str):
     date_latest = df.iloc[-1]["Date"]
     return latest, prev, date_latest
 
-
 def pct_change(latest, prev):
     if prev == 0 or pd.isna(prev):
         return None
     return (latest - prev) / prev * 100.0
+
+def fmt_pct(p):
+    if p is None or pd.isna(p):
+        return "n/a"
+    return f"{p:+.2f}%"
+
+
+   
 
 
 def now_local() -> datetime:
@@ -223,14 +230,13 @@ btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btcusd")      # Bitcoin USD
         st.metric("US 10Y", f"{y10:.2f}%", f"{bps:+.0f} bps")
 
     with c3:
-        st.metric("DXY", f"{dxy:.2f}", f"{pct_change(dxy, dxy_prev):+.2f}%")
+   st.metric("DXY", f"{dxy:.2f}", fmt_pct(pct_change(dxy, dxy_prev)))
 
     with c4:
-        st.metric("Nasdaq", f"{ndq:,.0f}", f"{pct_change(ndq, ndq_prev):+.2f}%")
+      st.metric("Nasdaq", f"{ndq:,.0f}", fmt_pct(pct_change(ndq, ndq_prev)))
 
     with c5:
-        st.metric("BTC", f"${btc:,.0f}", f"{pct_change(btc, btc_prev):+.2f}%")
-
+        st.metric("BTC", f"${btc:,.0f}", fmt_pct(pct_change(btc, btc_prev)))
     st.divider()
 
 except Exception as e:
