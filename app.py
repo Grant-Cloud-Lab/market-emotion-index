@@ -11,7 +11,7 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(page_title="Market Emotion Index", layout="wide")
 
 LOCAL_TZ = tz.gettz("Africa/Johannesburg")
-REFRESH_SECONDS = 300  # 5 minutes
+REFRESH_SECONDS = None  # manual refresh only
 DEFAULT_HALF_LIFE_HOURS = 6
 
 FINANCE_KEYWORDS = [
@@ -223,6 +223,25 @@ def score_headlines(headline_items, half_life_hours: float):
 
 st.title("📈 Market Emotion Index (Live)")
 
+if "driver_data" not in st.session_state:
+    st.session_state.driver_data = {}
+
+with st.sidebar:
+    st.subheader("Driver Data")
+    if st.button("🔄 Update Driver Data"):
+        with st.spinner("Updating driver data..."):
+            try:
+                ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")
+                btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btc-usd")
+
+                st.session_state.driver_data.update({
+                    "ndq": ndq, "ndq_prev": ndq_prev, "ndq_dt": ndq_dt,
+                    "btc": btc, "btc_prev": btc_prev, "btc_dt": btc_dt,
+                    "fetched_at": datetime.now(),
+                })
+                st.success("Driver data updated ✅")
+            except Exception as e:
+                st.error(f"Driver update failed: {e}")
 # ----------------------------
 # Drivers Panel
 # ----------------------------
@@ -231,8 +250,13 @@ try:
     y10, y10_prev, y10_dt = fetch_fred_latest("DGS10")
 
     dxy, dxy_prev, dxy_dt = fetch_fred_latest("DTWEXBGS")          # US Dollar Index ETF proxy
-    ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")     # Nasdaq-100 ETF proxy
-    btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btc-usd")     # Bitcoin USD
+    driver_data = st.session_state.driver_data
+    ndq = driver_data.get("ndq")
+    ndq_prev = driver_data.get("ndq_prev")
+    btc = driver_data.get("btc")
+    btc_prev = driver_data.get("btc_prev")
+    #ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")     # Nasdaq-100 ETF proxy
+    #btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btc-usd")     # Bitcoin USD
 
     c1, c2, c3, c4, c5 = st.columns(5)
 
@@ -247,18 +271,20 @@ try:
         st.metric("DXY", f"{dxy:.2f}", fmt_pct(pct_change(dxy, dxy_prev)))
 
     with c4:
+        if ndq is None:
+        st.metric("Nasdaq", "—", "Click Update")
+    else:
         st.metric("Nasdaq", f"{ndq:,.0f}", fmt_pct(pct_change(ndq, ndq_prev)))
 
     with c5:
+         if btc is None:
+        st.metric("BTC", "—", "Click Update")
+    else:
         st.metric("BTC", f"${btc:,.0f}", fmt_pct(pct_change(btc, btc_prev)))
 
-    st.divider()
-
-except Exception as e:
-    st.warning(f"Driver data loading...")
-    st.exception(e) 
-
-st_autorefresh(interval=REFRESH_SECONDS * 1000, key="refresh")
+except Exception:
+    st.warning("Some driver data unavailable. Click Update if needed.")
+#st_autorefresh(interval=REFRESH_SECONDS * 1000, key="refresh")
 
 with st.sidebar:
     st.header("Settings")
