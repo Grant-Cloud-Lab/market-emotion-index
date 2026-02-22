@@ -272,15 +272,15 @@ try:
 
     with c4:
         if ndq is None:
-        st.metric("Nasdaq", "—", "Click Update")
-    else:
-        st.metric("Nasdaq", f"{ndq:,.0f}", fmt_pct(pct_change(ndq, ndq_prev)))
+            st.metric("Nasdaq", "—", "Click Update")
+        else:
+            st.metric("Nasdaq", f"{ndq:,.0f}", fmt_pct(pct_change(ndq, ndq_prev)))
 
     with c5:
-         if btc is None:
-        st.metric("BTC", "—", "Click Update")
-    else:
-        st.metric("BTC", f"${btc:,.0f}", fmt_pct(pct_change(btc, btc_prev)))
+        if btc is None:
+            st.metric("BTC", "—", "Click Update")
+        else:
+            st.metric("BTC", f"${btc:,.0f}", fmt_pct(pct_change(btc, btc_prev)))
 
 except Exception:
     st.warning("Some driver data unavailable. Click Update if needed.")
