@@ -457,8 +457,7 @@ with de2:
     st.metric("Macro Pulse", pulse_text)
 
 
-except Exception as e:
-    st.warning("Some driver data unavailable. Click Update if needed.")
+
 #st_autorefresh(interval=REFRESH_SECONDS * 1000, key="refresh")
 
 with st.sidebar:
