@@ -151,22 +151,29 @@ def macro_pulse(dxy_series: pd.Series, us10y_series: pd.Series, vix_series: pd.S
         return "🟢 Macro Relief Pulse (2/3 falling)", inputs
     return "⚪ Macro Mixed / Neutral", inputs
 
+def volatility_expansion(hist: pd.DataFrame, window: int = 6, lookback: int = 12):
+    """
+    Detect whether emotion volatility (std dev of score) is expanding over the last `lookback` points
+    compared to earlier points. Returns (flag, text).
+    """
+    if hist is None or hist.empty or "score" not in hist.columns:
+        return False, "○ Emotion volatility: insufficient data"
 
-def volatility_expansion(score_series: pd.Series, window: int = VOL_WINDOW, lookback: int = VOL_LOOKBACK) -> tuple[bool, str]:
+    score_series = pd.to_numeric(hist["score"], errors="coerce").dropna()
     if score_series is None or len(score_series) < window + lookback + 2:
-        return False, "⚪ Emotion volatility: insufficient data"
+        return False, "○ Emotion volatility: insufficient data"
 
     vol = score_series.rolling(window).std().dropna()
     if len(vol) < lookback + 1:
-        return False, "⚪ Emotion volatility: insufficient data"
+        return False, "○ Emotion volatility: insufficient data"
 
     recent = vol.iloc[-lookback:]
     delta = float(recent.iloc[-1] - recent.iloc[0])
 
     if delta > 0:
-     return True, "🔶 Volatility Expanding (emotion acceleration)"
-return False, "✅ Volatility Stable/Contracting"  
-    
+        return True, "🔶 Volatility Expanding (emotion acceleration)"
+    return False, "✅ Volatility Stable/Contracting"
+
 
 def pct_change(latest, prev):
     if prev == 0 or pd.isna(prev):
