@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timezone, timedelta
 import requests
 import pandas as pd
+import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
 from dateutil import tz
@@ -12,6 +13,25 @@ st.set_page_config(page_title="Market Emotion Index", layout="wide")
 
 LOCAL_TZ = tz.gettz("Africa/Johannesburg")
 REFRESH_SECONDS = None  # manual refresh only
+# Score regimes (for labeling)
+REGIME_THRESHOLDS = {
+    "stress_build": (-80, -40),
+    "caution": (-40, -10),
+    "transition": (-10, 10),
+    "risk_on": (10, 40),
+    "speculative_heat": (40, 10**9),}
+
+# Direction lookback:
+# If your data updates every 5 minutes, 12 bars ≈ 1 hour.
+# If it's daily bars, set this to 1 later.
+DIR_LOOKBACK_BARS = 1   
+
+# Flat band to prevent noise-flips in direction logic (0.05%)
+DIR_FLAT_BAND = 0.0005
+
+# Volatility expansion settings for emotion score
+VOL_WINDOW = 50       # rolling window size
+VOL_LOOKBACK = 10     # compare last vs first of recent vol points
 DEFAULT_HALF_LIFE_HOURS = 6
 
 FINANCE_KEYWORDS = [
@@ -49,7 +69,84 @@ def fetch_fred_latest(series_id: str):
 def fetch_stooq_daily_latest(symbol: str):
     url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
     df = pd.read_csv(url)
+# -------------------------------
+# Decision Engine helpers
+# -------------------------------
 
+def label_regime(score: float) -> str:
+    # Uses the ranges from REGIME_THRESHOLDS (set in Step 0)
+    if score <= REGIME_THRESHOLDS["stress_build"][1]:
+        return "🔴 Stress Build"
+    if REGIME_THRESHOLDS["caution"][0] < score <= REGIME_THRESHOLDS["caution"][1]:
+        return "🟡 Caution / Defensive Tilt"
+    if REGIME_THRESHOLDS["transition"][0] < score < REGIME_THRESHOLDS["transition"][1]:
+        return "⚪ Transition"
+    if REGIME_THRESHOLDS["risk_on"][0] <= score < REGIME_THRESHOLDS["risk_on"][1]:
+        return "🟢 Risk On"
+    return "🟣 Speculative Heat"
+
+
+def pct_change_over_n(series: pd.Series, n: int) -> float:
+    if series is None or len(series) <= n:
+        return 0.0
+    a = float(series.iloc[-1])
+    b = float(series.iloc[-1 - n])
+    if b == 0 or np.isnan(b) or np.isnan(a):
+        return 0.0
+    return (a / b) - 1.0
+
+
+def direction(series: pd.Series, n: int, flat_band: float = DIR_FLAT_BAND) -> str:
+    r = pct_change_over_n(series, n)
+    if r > flat_band:
+        return "up"
+    if r < -flat_band:
+        return "down"
+    return "flat"
+
+
+def divergence_alert(nq_series: pd.Series, btc_series: pd.Series, vix_series: pd.Series, n: int) -> tuple[bool, str]:
+    nq_ret = pct_change_over_n(nq_series, n)
+    btc_ret = pct_change_over_n(btc_series, n)
+    vix_ret = pct_change_over_n(vix_series, n)
+
+    is_div = (nq_ret > 0) and (btc_ret < 0) and (vix_ret > 0)
+    if is_div:
+        return True, "⚠️ Internal Risk Divergence (NQ↑ BTC↓ VIX↑)"
+    return False, "✅ No internal divergence (NQ/BTC/VIX)"
+
+
+def macro_pulse(dxy_series: pd.Series, us10y_series: pd.Series, vix_series: pd.Series, n: int) -> tuple[str, dict]:
+    inputs = {
+        "DXY": direction(dxy_series, n) if dxy_series is not None else "missing",
+        "10Y": direction(us10y_series, n) if us10y_series is not None else "missing",
+        "VIX": direction(vix_series, n) if vix_series is not None else "missing",
+    }
+
+    ups = sum(1 for v in inputs.values() if v == "up")
+    downs = sum(1 for v in inputs.values() if v == "down")
+
+    if ups >= 2:
+        return "🔵 Macro Tightening Pulse (2/3 rising)", inputs
+    if downs >= 2:
+        return "🟢 Macro Relief Pulse (2/3 falling)", inputs
+    return "⚪ Macro Mixed / Neutral", inputs
+
+
+def volatility_expansion(score_series: pd.Series, window: int = VOL_WINDOW, lookback: int = VOL_LOOKBACK) -> tuple[bool, str]:
+    if score_series is None or len(score_series) < window + lookback + 2:
+        return False, "⚪ Emotion volatility: insufficient data"
+
+    vol = score_series.rolling(window).std().dropna()
+    if len(vol) < lookback + 1:
+        return False, "⚪ Emotion volatility: insufficient data"
+
+    recent = vol.iloc[-lookback:]
+    delta = float(recent.iloc[-1] - recent.iloc[0])
+
+    if delta > 0:
+     return True, "🔶 Volatility Expanding (emotion acceleration)"
+return False, "✅ Volatility Stable/Contracting"  
     # Normalize column names to lowercase
     df.columns = [c.strip().lower() for c in df.columns]
 
@@ -92,7 +189,9 @@ def now_local() -> datetime:
 def ensure_history_file():
     os.makedirs("data", exist_ok=True)
     if not os.path.exists(HISTORY_PATH):
-        df = pd.DataFrame(columns=["ts_iso", "score", "headline_count", "panic_hits", "vix_mentions"])
+       df = pd.DataFrame(columns=[
+    "ts_iso", "score", "headline_count", "panic_hits", "vix_mentions",
+    "regime", "divergence", "macro_pulse", "vol_expanding"
         df.to_csv(HISTORY_PATH, index=False)
 
 
@@ -100,6 +199,10 @@ def load_history_last_24h() -> pd.DataFrame:
     ensure_history_file()
     df = pd.read_csv(HISTORY_PATH)
     if df.empty:
+        # Backwards-compatible: ensure new Decision Engine columns exist
+    for col in ["regime", "divergence", "macro_pulse", "vol_expanding"]:
+        if col not in df.columns:
+            df[col] = None
         return df
 
     df["ts"] = pd.to_datetime(df["ts_iso"], utc=True).dt.tz_convert(LOCAL_TZ)
@@ -109,7 +212,16 @@ def load_history_last_24h() -> pd.DataFrame:
     return df
 
 
-def save_point(score: float, headline_count: int, panic_hits: int, vix_mentions: int):
+def save_point(
+    score: float,
+    headline_count: int,
+    panic_hits: int,
+    vix_mentions: int,
+    regime: str | None = None,
+    divergence: str | None = None,
+    macro_pulse: str | None = None,
+    vol_expanding: bool | None = None,
+):
     ensure_history_file()
     df = pd.read_csv(HISTORY_PATH)
     ts = now_local()
@@ -120,12 +232,18 @@ def save_point(score: float, headline_count: int, panic_hits: int, vix_mentions:
             return
 
     new_row = {
-        "ts_iso": ts.astimezone(timezone.utc).isoformat(),
-        "score": float(score),
-        "headline_count": int(headline_count),
-        "panic_hits": int(panic_hits),
-        "vix_mentions": int(vix_mentions),
-    }
+       "ts_iso": ts.astimezone(timezone.utc).isoformat(),
+       "score": float(score),
+       "headline_count": int(headline_count),
+       "panic_hits": int(panic_hits),
+       "vix_mentions": int(vix_mentions),
+
+       # Decision Engine fields (optional)
+       "regime": regime,
+       "divergence": divergence,
+       "macro_pulse": macro_pulse,
+       "vol_expanding": vol_expanding,
+  }
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
     df["ts"] = pd.to_datetime(df["ts_iso"], utc=True).dt.tz_convert(LOCAL_TZ)
@@ -243,6 +361,25 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"Driver update failed: {e}")
 # ----------------------------
+def dir_from_latest_prev(latest, prev, flat_band=DIR_FLAT_BAND):
+    if prev is None or pd.isna(prev) or prev == 0 or latest is None or pd.isna(latest):
+        return "flat"
+    r = (float(latest) / float(prev)) - 1.0
+    if r > flat_band:
+        return "up"
+    if r < -flat_band:
+        return "down"
+    return "flat"
+
+def divergence_from_levels(ndq, ndq_prev, btc, btc_prev, vix, vix_prev):
+    nq_dir = dir_from_latest_prev(ndq, ndq_prev)
+    btc_dir = dir_from_latest_prev(btc, btc_prev)
+    vix_dir = dir_from_latest_prev(vix, vix_prev)
+
+    is_div = (nq_dir == "up") and (btc_dir == "down") and (vix_dir == "up")
+    if is_div:
+        return True, "⚠️ Internal Risk Divergence (NQ↑ BTC↓ VIX↑)"
+    return False, "✅ No internal divergence (NQ/BTC/VIX)"
 # Drivers Panel
 # ----------------------------
 try:
@@ -255,7 +392,31 @@ try:
     ndq_prev = driver_data.get("ndq_prev")
     btc = driver_data.get("btc")
     btc_prev = driver_data.get("btc_prev")
-    #ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")     # Nasdaq-100 ETF proxy
+    # --- Decision Engine: directions, divergence, macro pulse ---
+    div_flag, div_text = divergence_from_levels(ndq, ndq_prev, btc, btc_prev, vix, vix_prev)
+
+    dxy_dir = dir_from_latest_prev(dxy, dxy_prev)
+    y10_dir  = dir_from_latest_prev(y10, y10_prev)
+    vix_dir  = dir_from_latest_prev(vix, vix_prev)
+
+ups = sum(1 for x in [dxy_dir, y10_dir, vix_dir] if x == "up")
+downs = sum(1 for x in [dxy_dir, y10_dir, vix_dir] if x == "down")
+
+if ups >= 2:
+    pulse_text = "🔵 Macro Tightening Pulse (2/3 rising)"
+elif downs >= 2:
+    pulse_text = "🟢 Macro Relief Pulse (2/3 falling)"
+else:
+    pulse_text = "⚪ Macro Mixed / Neutral"
+
+pulse_inputs = {"DXY": dxy_dir, "10Y": y10_dir, "VIX": vix_dir}
+except Exception as e:
+    st.error(f"Driver fetch failed: {e}")
+    div_flag, div_text = False, "⚪ Divergence unavailable"
+    pulse_text = "⚪ Macro Pulse unavailable"
+    pulse_inputs = {}
+
+#ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")     # Nasdaq-100 ETF proxy
     #btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btc-usd")     # Bitcoin USD
 
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -281,8 +442,19 @@ try:
             st.metric("BTC", "—", "Click Update")
         else:
             st.metric("BTC", f"${btc:,.0f}", fmt_pct(pct_change(btc, btc_prev)))
+            
+st.markdown("### 🧠 Decision Engine")
 
-except Exception:
+de1, de2 = st.columns(2)
+
+with de1:
+    st.metric("Divergence", div_text)
+
+with de2:
+    st.metric("Macro Pulse", pulse_text)
+
+
+except Exception as e:
     st.warning("Some driver data unavailable. Click Update if needed.")
 #st_autorefresh(interval=REFRESH_SECONDS * 1000, key="refresh")
 
@@ -307,14 +479,28 @@ try:
 except Exception as e:
     st.error(f"Couldn’t fetch or process headlines. Error: {e}")
     st.stop()
+# --- Decision Engine: regime + emotion speed (vol expansion) ---
+regime = label_regime(float(score))
 
+hist = load_history_last_24h()
+if "score" in hist.columns and not hist.empty:
+    vol_flag, vol_text = volatility_expansion(hist["score"])
+else:
+    vol_flag, vol_text = False, "⚪ Emotion volatility: insufficient data"
 all_headline_texts = [h["headline"] for h in headlines]
 panic_hits = count_keyword_hits(all_headline_texts, PANIC_KEYWORDS)
 vix_mentions = vix_mentions_count(all_headline_texts)
 
-save_point(score=score, headline_count=len(headlines), panic_hits=panic_hits, vix_mentions=vix_mentions)
-hist = load_history_last_24h()
-
+save_point(
+    score=score,
+    headline_count=len(headlines),
+    panic_hits=panic_hits,
+    vix_mentions=vix_mentions,
+    regime=regime,
+    divergence=div_text,
+    macro_pulse=pulse_text,
+    vol_expanding=vol_flag,
+)
 colA, colB = st.columns([1, 1])
 
 with colA:
@@ -331,7 +517,16 @@ with colA:
     ))
     gauge.update_layout(height=320, margin=dict(l=20, r=20, t=60, b=0))
     st.plotly_chart(gauge, use_container_width=True)
+st.markdown("### 🧠 Regime & Emotion Speed")
 
+r1, r2 = st.columns(2)
+
+with r1:
+    st.metric("Regime", regime)
+
+with r2:
+    st.metric("Emotion Speed", vol_text)
+    #
     if score <= -70:
         st.error("🚨 Extreme PANIC zone (≤ -70)")
     elif score >= 70:
