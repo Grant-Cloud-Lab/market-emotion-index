@@ -402,17 +402,17 @@ try:
     y10_dir  = dir_from_latest_prev(y10, y10_prev)
     vix_dir  = dir_from_latest_prev(vix, vix_prev)
 
-ups = sum(1 for x in [dxy_dir, y10_dir, vix_dir] if x == "up")
-downs = sum(1 for x in [dxy_dir, y10_dir, vix_dir] if x == "down")
+    ups = sum(1 for x in [dxy_dir, y10_dir, vix_dir] if x == "up")
+    downs = sum(1 for x in [dxy_dir, y10_dir, vix_dir] if x == "down")
 
-if ups >= 2:
-    pulse_text = "🔵 Macro Tightening Pulse (2/3 rising)"
-elif downs >= 2:
-    pulse_text = "🟢 Macro Relief Pulse (2/3 falling)"
-else:
-    pulse_text = "⚪ Macro Mixed / Neutral"
+    if ups >= 2:
+        pulse_text = "🔵 Macro Tightening Pulse (2/3 rising)"
+    elif downs >= 2:
+        pulse_text = "🟢 Macro Relief Pulse (2/3 falling)"
+    else:
+        pulse_text = "⚪ Macro Mixed / Neutral"
 
-pulse_inputs = {"DXY": dxy_dir, "10Y": y10_dir, "VIX": vix_dir}
+    pulse_inputs = {"DXY": dxy_dir, "10Y": y10_dir, "VIX": vix_dir}
 except Exception as e:
     st.error(f"Driver fetch failed: {e}")
     div_flag, div_text = False, "⚪ Divergence unavailable"
