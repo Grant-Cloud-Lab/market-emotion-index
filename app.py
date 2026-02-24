@@ -190,8 +190,8 @@ def ensure_history_file():
     os.makedirs("data", exist_ok=True)
     if not os.path.exists(HISTORY_PATH):
        df = pd.DataFrame(columns=[
-    "ts_iso", "score", "headline_count", "panic_hits", "vix_mentions",
-    "regime", "divergence", "macro_pulse", "vol_expanding"
+           "ts_iso", "score", "headline_count", "panic_hits", "vix_mentions",
+           "regime", "divergence", "macro_pulse", "vol_expanding"
        ])       
         df.to_csv(HISTORY_PATH, index=False)
 
