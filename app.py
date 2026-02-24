@@ -192,6 +192,7 @@ def ensure_history_file():
        df = pd.DataFrame(columns=[
     "ts_iso", "score", "headline_count", "panic_hits", "vix_mentions",
     "regime", "divergence", "macro_pulse", "vol_expanding"
+       ])       
         df.to_csv(HISTORY_PATH, index=False)
 
 
