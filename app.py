@@ -199,11 +199,13 @@ def ensure_history_file():
 def load_history_last_24h() -> pd.DataFrame:
     ensure_history_file()
     df = pd.read_csv(HISTORY_PATH)
-    if df.empty:
-        # Backwards-compatible: ensure new Decision Engine columns exist
+    # Backwards-compatible: ensure new Decision Engine columns exist
     for col in ["regime", "divergence", "macro_pulse", "vol_expanding"]:
         if col not in df.columns:
-           df[col] = None
+            df[col] = None
+
+    
+    if df.empty:
         return df
 
     df["ts"] = pd.to_datetime(df["ts_iso"], utc=True).dt.tz_convert(LOCAL_TZ)
