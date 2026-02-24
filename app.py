@@ -493,7 +493,7 @@ regime = label_regime(float(score))
 
 hist = load_history_last_24h()
 if "score" in hist.columns and not hist.empty:
-    vol_flag, vol_text = volatility_expansion(hist["score"])
+    vol_flag, vol_text = volatility_expansion(hist)
 else:
     vol_flag, vol_text = False, "⚪ Emotion volatility: insufficient data"
 all_headline_texts = [h["headline"] for h in headlines]
