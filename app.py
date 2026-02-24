@@ -232,7 +232,7 @@ with st.sidebar:
         with st.spinner("Updating driver data..."):
             try:
                 ndq, ndq_prev, ndq_dt = fetch_stooq_daily_latest("qqq.us")
-                btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btc-usd")
+                btc, btc_prev, btc_dt = fetch_stooq_daily_latest("btcusd")
 
                 st.session_state.driver_data.update({
                     "ndq": ndq, "ndq_prev": ndq_prev, "ndq_dt": ndq_dt,
