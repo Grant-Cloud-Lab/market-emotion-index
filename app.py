@@ -193,7 +193,7 @@ def ensure_history_file():
            "ts_iso", "score", "headline_count", "panic_hits", "vix_mentions",
            "regime", "divergence", "macro_pulse", "vol_expanding"
        ])       
-        df.to_csv(HISTORY_PATH, index=False)
+       df.to_csv(HISTORY_PATH, index=False)
 
 
 def load_history_last_24h() -> pd.DataFrame:
