@@ -69,6 +69,25 @@ def fetch_fred_latest(series_id: str):
 def fetch_stooq_daily_latest(symbol: str):
     url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
     df = pd.read_csv(url)
+    # Normalize column names to lowercase
+    df.columns = [c.strip().lower() for c in df.columns]
+
+    if "date" not in df.columns or "close" not in df.columns:
+        raise ValueError(f"Unexpected columns for {symbol}: {df.columns.tolist()}")
+
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["close"] = pd.to_numeric(df["close"], errors="coerce")
+
+    df = df.dropna().sort_values("date")
+
+    if len(df) < 2:
+        raise ValueError(f"Not enough data returned for {symbol}")
+
+    latest = float(df.iloc[-1]["close"])
+    prev = float(df.iloc[-2]["close"])
+    date_latest = df.iloc[-1]["date"]
+
+    return latest, prev, date_latest
 # -------------------------------
 # Decision Engine helpers
 # -------------------------------
@@ -147,26 +166,7 @@ def volatility_expansion(score_series: pd.Series, window: int = VOL_WINDOW, look
     if delta > 0:
      return True, "🔶 Volatility Expanding (emotion acceleration)"
 return False, "✅ Volatility Stable/Contracting"  
-    # Normalize column names to lowercase
-    df.columns = [c.strip().lower() for c in df.columns]
-
-    if "date" not in df.columns or "close" not in df.columns:
-        raise ValueError(f"Unexpected columns for {symbol}: {df.columns.tolist()}")
-
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["close"] = pd.to_numeric(df["close"], errors="coerce")
-
-    df = df.dropna().sort_values("date")
-
-    if len(df) < 2:
-        raise ValueError(f"Not enough data returned for {symbol}")
-
-    latest = float(df.iloc[-1]["close"])
-    prev = float(df.iloc[-2]["close"])
-    date_latest = df.iloc[-1]["date"]
-
-    return latest, prev, date_latest
-
+    
 
 def pct_change(latest, prev):
     if prev == 0 or pd.isna(prev):
