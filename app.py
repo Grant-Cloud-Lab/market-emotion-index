@@ -203,7 +203,7 @@ def load_history_last_24h() -> pd.DataFrame:
         # Backwards-compatible: ensure new Decision Engine columns exist
     for col in ["regime", "divergence", "macro_pulse", "vol_expanding"]:
         if col not in df.columns:
-            df[col] = None
+           df[col] = None
         return df
 
     df["ts"] = pd.to_datetime(df["ts_iso"], utc=True).dt.tz_convert(LOCAL_TZ)
