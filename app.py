@@ -452,7 +452,7 @@ def score_headlines(headline_items, half_life_hours: float):
     score = max(-100.0, min(100.0, avg * 100.0))
     return score, df_scored
 
-st.title("📈 Market Emotion Index (Live)")
+st.markdown("## 📈 Market Emotion Index")
 
 if "driver_data" not in st.session_state:
     st.session_state.driver_data = {}
