@@ -383,7 +383,7 @@ def score_headlines(headline_items, half_life_hours: float):
     # Use the feed's latest timestamp as the anchor (prevents "no headlines" if feed is delayed)
     times = [it.get("published_utc") for it in headline_items if it.get("published_utc") is not None]
     if not times:
-    return 0.0, pd.DataFrame()
+       return 0.0, pd.DataFrame()
 
 latest_ts = max(times)
 cutoff = latest_ts - timedelta(hours=24)  # DAILY window based on feed freshness
