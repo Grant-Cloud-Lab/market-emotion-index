@@ -379,8 +379,20 @@ def score_headlines(headline_items, half_life_hours: float):
     scored = []
     # Hyper-reactive mode: only score very recent headlines
     now_utc = datetime.now(timezone.utc)
-    cutoff = now_utc - timedelta(hours=12)  # strict freshness window
-    headline_items = [it for it in headline_items if it.get("published_utc") and it["published_utc"] >= cutoff]
+
+# Use the feed's latest timestamp as the anchor (prevents "no headlines" if feed is delayed)
+times = [it.get("published_utc") for it in headline_items if it.get("published_utc") is not None]
+if not times:
+    return 0.0, pd.DataFrame()
+
+latest_ts = max(times)
+cutoff = latest_ts - timedelta(hours=24)  # DAILY window based on feed freshness
+
+headline_items = [it for it in headline_items if it.get("published_utc") and it["published_utc"] >= cutoff]
+
+# Optional: warn if feed is stale (but still compute)
+if (now_utc - latest_ts) > timedelta(hours=24):
+    st.warning("⚠️ News feed appears stale (latest headline is >24h old). Using most recent 24h window from feed.")
     if not headline_items:
         st.warning("⚠️ No headlines in the last 12 hours — feed may be stale.")
     return 0.0, pd.DataFrame()
