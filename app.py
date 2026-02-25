@@ -377,13 +377,16 @@ def fetch_headlines_finnhub(api_key: str, max_items_per_category: int = 50):
 def score_headlines(headline_items, half_life_hours: float):
     analyzer = SentimentIntensityAnalyzer()
     scored = []
+    
+    df = pd.DataFrame(headline_items or [])  # ✅ ADD THIS (df always exists)
+    
     # Hyper-reactive mode: only score very recent headlines
     now_utc = datetime.now(timezone.utc)
 
     # Use the feed's latest timestamp as the anchor (prevents "no headlines" if feed is delayed)
     times = [it.get("published_utc") for it in headline_items if it.get("published_utc") is not None]
     if not times:
-       return 0.0, pd.DataFrame()
+       return 0.0, df
 
     latest_ts = max(times)
     cutoff = latest_ts - timedelta(hours=24)  # DAILY window based on feed freshness
@@ -399,7 +402,7 @@ def score_headlines(headline_items, half_life_hours: float):
 
     if not headline_items:
         st.warning("⚠️ No headlines in the last 12 hours — feed may be stale.")
-        return 0.0, pd.DataFrame()
+        return 0.0, df
     
     # Debug collector (reset each run)
     st.session_state["debug_times"] = []
