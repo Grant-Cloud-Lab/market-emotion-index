@@ -11,6 +11,21 @@ from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Market Emotion Index", layout="wide")
 
+st.markdown("""
+<style>
+/* Main page padding */
+.block-container { 
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+/* Reduce whitespace between elements */
+div[data-testid="stVerticalBlock"] > div { 
+  gap: 0.4rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
 LOCAL_TZ = tz.gettz("Africa/Johannesburg")
 from datetime import datetime
 
