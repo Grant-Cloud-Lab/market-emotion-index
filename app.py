@@ -369,7 +369,7 @@ def fetch_headlines_finnhub(api_key: str, max_items_per_category: int = 50):
         seen.add(key)
         unique.append(it)
 
-    unique = [it for it in unique if is_finance_relevant(it["headline"])]
+    # unique = [it for it in unique if is_finance_relevant(it["headline"])]
     unique.sort(key=lambda x: x["published_utc"], reverse=True)
     return unique[:120]
 
