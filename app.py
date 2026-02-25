@@ -385,10 +385,10 @@ def score_headlines(headline_items, half_life_hours: float):
     if not times:
        return 0.0, pd.DataFrame()
 
-latest_ts = max(times)
-cutoff = latest_ts - timedelta(hours=24)  # DAILY window based on feed freshness
+    latest_ts = max(times)
+    cutoff = latest_ts - timedelta(hours=24)  # DAILY window based on feed freshness
 
-headline_items = [it for it in headline_items if it.get("published_utc") and it["published_utc"] >= cutoff]
+    headline_items = [it for it in headline_items if it.get("published_utc") and it["published_utc"] >= cutoff]
 
     # Optional: warn if feed is stale (but still compute)
     if (now_utc - latest_ts) > timedelta(hours=24):
