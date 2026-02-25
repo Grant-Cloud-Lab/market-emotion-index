@@ -25,7 +25,7 @@ st.session_state.run_count += 1
 
 st.sidebar.caption(f"Run #: {st.session_state.run_count} | tick: {time.time():.0f}")
 
-REFRESH_SECONDS = None  # manual refresh only
+REFRESH_SECONDS = 300  # 5 minutes
 # Score regimes (for labeling)
 REGIME_THRESHOLDS = {
     "stress_build": (-80, -40),
