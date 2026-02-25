@@ -17,6 +17,14 @@ from datetime import datetime
 st.sidebar.caption(
     f"Last refresh: {datetime.now(LOCAL_TZ).strftime('%Y-%m-%d %H:%M:%S')}"
 )
+import time
+
+if "run_count" not in st.session_state:
+    st.session_state.run_count = 0
+st.session_state.run_count += 1
+
+st.sidebar.caption(f"Run #: {st.session_state.run_count} | tick: {time.time():.0f}")
+
 REFRESH_SECONDS = None  # manual refresh only
 # Score regimes (for labeling)
 REGIME_THRESHOLDS = {
