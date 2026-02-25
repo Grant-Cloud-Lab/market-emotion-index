@@ -382,8 +382,8 @@ def score_headlines(headline_items, half_life_hours: float):
     now_utc = datetime.now(timezone.utc)
     cutoff = now_utc - timedelta(hours=12)  # strict freshness window
     headline_items = [it for it in headline_items if it.get("published_utc") and it["published_utc"] >= cutoff]
-if not headline_items:
-    st.warning("⚠️ No headlines in the last 12 hours — feed may be stale.")
+    if not headline_items:
+        st.warning("⚠️ No headlines in the last 12 hours — feed may be stale.")
     return 0.0, pd.DataFrame()
     
     
