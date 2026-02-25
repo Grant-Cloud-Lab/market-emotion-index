@@ -428,7 +428,7 @@ def score_headlines(headline_items, half_life_hours: float):
         return 0.0, pd.DataFrame()
 
     # Show debug once per run
-    with st.expander("Debug: published_utc values", expanded=True):
+    with st.expander("Debug: published_utc values", expanded=False):
         st.write(st.session_state.get("debug_times", []))
 
     df_scored  = pd.DataFrame(scored)
