@@ -390,16 +390,16 @@ cutoff = latest_ts - timedelta(hours=24)  # DAILY window based on feed freshness
 
 headline_items = [it for it in headline_items if it.get("published_utc") and it["published_utc"] >= cutoff]
 
-# Optional: warn if feed is stale (but still compute)
-if (now_utc - latest_ts) > timedelta(hours=24):
-    st.warning(
-        "⚠️ News feed appears stale (latest headline is >24h old). "
-        "Using most recent 24h window from feed."
-    )
+    # Optional: warn if feed is stale (but still compute)
+    if (now_utc - latest_ts) > timedelta(hours=24):
+        st.warning(
+            "⚠️ News feed appears stale (latest headline is >24h old). "
+            "Using most recent 24h window from feed."
+        )
 
-if not headline_items:
-    st.warning("⚠️ No headlines in the last 12 hours – feed may be stale.")
-    return 0.0, pd.DataFrame()
+    if not headline_items:
+        st.warning("⚠️ No headlines in the last 12 hours — feed may be stale.")
+        return 0.0, pd.DataFrame()
     
     # Debug collector (reset each run)
     st.session_state["debug_times"] = []
