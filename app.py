@@ -1,4 +1,4 @@
-import os
+?import os
 from datetime import datetime, timezone, timedelta
 import requests
 import pandas as pd
@@ -383,10 +383,23 @@ def score_headlines(headline_items, half_life_hours: float):
         h = it["headline"]
         compound = analyzer.polarity_scores(h)["compound"]  # [-1, 1]
         w = recency_weight(it["published_utc"], half_life_hours)
+     if "debug_times" not in st.session_state:
+        st.session_state.debug_times = []
+
+     if len(st.session_state.debug_times) < 5:
+        st.session_state.debug_times.append({
+          "headline": it["headline"],
+          "published_utc": str(it.get("published_utc")),
+    })   
+    
         scored.append({**it, "compound": compound, "weight": w, "weighted_compound": compound * w})
 
     if not scored:
         return 0.0, pd.DataFrame()
+    with st.expander("Debug: published_utc values", expanded=True):
+         st.write(st.session_state.get("debug_times", []))
+
+st.session_state.debug_times = []    
 
     df = pd.DataFrame(scored)
     wsum = df["weight"].sum()
