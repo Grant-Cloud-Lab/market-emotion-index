@@ -366,7 +366,7 @@ def fetch_headlines_finnhub(api_key: str, max_items_per_category: int = 50):
         key = it["headline"].lower()
         if key in seen:
             continue
-        seen.add(key)
+        seen.add(key)F
         unique.append(it)
 
     # unique = [it for it in unique if is_finance_relevant(it["headline"])]
@@ -380,9 +380,9 @@ def score_headlines(headline_items, half_life_hours: float):
     # Hyper-reactive mode: only score very recent headlines
     now_utc = datetime.now(timezone.utc)
 
-# Use the feed's latest timestamp as the anchor (prevents "no headlines" if feed is delayed)
-times = [it.get("published_utc") for it in headline_items if it.get("published_utc") is not None]
-if not times:
+    # Use the feed's latest timestamp as the anchor (prevents "no headlines" if feed is delayed)
+    times = [it.get("published_utc") for it in headline_items if it.get("published_utc") is not None]
+    if not times:
     return 0.0, pd.DataFrame()
 
 latest_ts = max(times)
