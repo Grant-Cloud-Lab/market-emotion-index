@@ -432,8 +432,8 @@ def score_headlines(headline_items, half_life_hours: float):
         st.write(st.session_state.get("debug_times", []))
 
     df_scored  = pd.DataFrame(scored)
-    wsum = df["weight"].sum()
-    avg = (df["weighted_compound"].sum() / wsum) if wsum > 0 else 0.0
+    wsum = df_scored["weight"].sum()
+    avg = (df_scored["weighted_compound"].sum() / wsum) if wsum > 0 else 0.0
     score = max(-100.0, min(100.0, avg * 100.0))
     return score, df_scored
 
