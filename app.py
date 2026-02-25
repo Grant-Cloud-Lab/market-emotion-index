@@ -274,10 +274,43 @@ def save_point(
     df = df[df["ts"] >= cutoff].drop(columns=["ts"])
     df.to_csv(HISTORY_PATH, index=False)
 
+def recency_weight(published_utc, half_life_hours: float) -> float:
+    # Defensive defaults
+    if half_life_hours is None or half_life_hours <= 0:
+        half_life_hours = 6.0
 
-def recency_weight(published_utc: datetime, half_life_hours: float) -> float:
-    age = (datetime.now(timezone.utc) - published_utc).total_seconds() / 3600.0
-    return 0.5 ** (age / half_life_hours)
+    # Coerce published_utc into an aware UTC datetime
+    if published_utc is None:
+        return 0.0
+
+    # If it's a string, try parse
+    if isinstance(published_utc, str):
+        try:
+            published_utc = pd.to_datetime(published_utc, utc=True).to_pydatetime()
+        except Exception:
+            return 0.0
+
+    # If datetime is naive, assume it is UTC (common RSS/API case)
+    if getattr(published_utc, "tzinfo", None) is None:
+        published_utc = published_utc.replace(tzinfo=timezone.utc)
+    else:
+        published_utc = published_utc.astimezone(timezone.utc)
+
+    now_utc = datetime.now(timezone.utc)
+    age_hours = (now_utc - published_utc).total_seconds() / 3600.0
+
+    # Guard against future timestamps or extreme ages
+    if age_hours < 0:
+        age_hours = 0.0
+    if age_hours > 24 * 14:  # older than 14 days -> effectively irrelevant
+        return 0.0
+
+    w = 0.5 ** (age_hours / half_life_hours)
+
+    # Avoid printing as 0.00 for fresh items due to float tiny-ness
+    if w < 1e-6:
+        return 0.0
+    return float(w)
 
 
 def is_finance_relevant(text: str) -> bool:
