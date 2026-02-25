@@ -427,9 +427,7 @@ def score_headlines(headline_items, half_life_hours: float):
         compound = analyzer.polarity_scores(h)["compound"]  # [-1, 1]
         w = recency_weight(it["published_utc"], half_life_hours)
 
-        if len(st.session_state.debug_times) < 5:
-            # st.write("DEBUG weight:", w)
-
+       
         # Collect first 5 timestamps
         if len(st.session_state["debug_times"]) < 5:
             st.session_state["debug_times"].append({
