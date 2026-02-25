@@ -633,9 +633,9 @@ st.divider()
 st.subheader("Top Headlines Driving the Score")
 
 if df_scored.empty:
-    st.warning("No finance-relevant headlines matched the filter. Try increasing max headlines.")
-    st.stop()
-
+    st.warning("No finance-relevant headlines matched the filter. Showing unfiltered headlines instead.")
+    df_scored = df.copy()
+    
 df_scored["published_local"] = df_scored["published_utc"].dt.tz_convert(LOCAL_TZ)
 
 top_pos = df_scored.sort_values(["weighted_compound"], ascending=False).head(8)
