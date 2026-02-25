@@ -425,11 +425,11 @@ if (now_utc - latest_ts) > timedelta(hours=24):
     with st.expander("Debug: published_utc values", expanded=True):
         st.write(st.session_state.get("debug_times", []))
 
-    df = pd.DataFrame(scored)
+    df_scored  = pd.DataFrame(scored)
     wsum = df["weight"].sum()
     avg = (df["weighted_compound"].sum() / wsum) if wsum > 0 else 0.0
     score = max(-100.0, min(100.0, avg * 100.0))
-    return score, df
+    return score, df_scored
 
 st.title("📈 Market Emotion Index (Live)")
 
