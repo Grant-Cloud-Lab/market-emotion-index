@@ -12,6 +12,11 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(page_title="Market Emotion Index", layout="wide")
 
 LOCAL_TZ = tz.gettz("Africa/Johannesburg")
+from datetime import datetime
+
+st.sidebar.caption(
+    f"Last refresh: {datetime.now(LOCAL_TZ).strftime('%Y-%m-%d %H:%M:%S')}"
+)
 REFRESH_SECONDS = None  # manual refresh only
 # Score regimes (for labeling)
 REGIME_THRESHOLDS = {
