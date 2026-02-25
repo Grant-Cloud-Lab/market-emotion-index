@@ -331,7 +331,6 @@ def vix_mentions_count(headlines):
     return sum(1 for h in headlines if "vix" in h.lower() or "volatility index" in h.lower())
 
 
-@st.cache_data(ttl=REFRESH_SECONDS)
 def fetch_headlines_finnhub(api_key: str, max_items_per_category: int = 50):
     categories = ["general", "forex", "crypto"]
     items = []
